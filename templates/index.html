@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FINWISE AI | PRO</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.net.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Rajdhani', sans-serif; color: #a7f3d0; background-color: #000; }
+        h1, h2, h3 { font-family: 'Orbitron', sans-serif; }
+        .glass { background: rgba(16, 185, 129, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(16, 185, 129, 0.2); }
+        .glass:hover { border-color: rgba(16, 185, 129, 0.5); box-shadow: 0 0 20px rgba(16, 185, 129, 0.1); }
+        .input-field { background: rgba(0,0,0,0.5); border: 1px solid #065f46; color: white; padding: 10px; border-radius: 6px; width: 100%; font-family: 'Rajdhani', sans-serif; }
+        .input-field:focus { outline: none; border-color: #10b981; box-shadow: 0 0 10px rgba(16, 185, 129, 0.2); }
+        .action-btn { background: linear-gradient(45deg, #064e3b, #065f46); color: #a7f3d0; border: 1px solid #10b981; font-weight: bold; padding: 12px; border-radius: 6px; width: 100%; letter-spacing: 1px; transition: all 0.3s; }
+        .action-btn:hover { background: #10b981; color: black; box-shadow: 0 0 15px #10b981; }
+        .loader { border: 3px solid rgba(16, 185, 129, 0.1); border-top: 3px solid #10b981; border-radius: 50%; width: 40px; height: 40px; animation: spin 0.8s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #10b981; border-radius: 3px; }
+        .table-glass { background: rgba(0,0,0,0.4); border: 1px solid rgba(16, 185, 129, 0.1); }
+        .table-head { background: rgba(6, 78, 59, 0.5); color: #a7f3d0; }
+        .table-row:hover { background: rgba(16, 185, 129, 0.1); }
+        #authModal { background: rgba(0,0,0,0.9); z-index: 1000; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+    <div id="vanta-bg" class="fixed inset-0 -z-10"></div>
+
+    <div id="authModal" class="fixed inset-0 flex items-center justify-center backdrop-blur-md">
+        <div class="glass p-10 rounded-2xl max-w-lg w-full text-center border-2 border-emerald-500 shadow-[0_0_50px_rgba(16,185,129,0.3)]">
+            <h2 class="text-4xl text-emerald-400 mb-2 font-orbitron">AUTHENTICATION</h2>
+            <p class="text-gray-400 mb-8 text-sm">Enter your Google Gemini API Key to access the Neural Core.</p>
+            <input type="password" id="apiKeyInput" placeholder="Paste 'AIza...' Key Here" class="input-field text-center text-lg mb-6">
+            <button onclick="saveKey()" class="action-btn text-xl">INITIALIZE SYSTEM 🔓</button>
+            <p class="text-xs text-gray-600 mt-4">Key is stored locally in your browser.</p>
+        </div>
+    </div>
+
+    <nav class="p-6 flex justify-between items-center glass sticky top-0 z-50 bg-black/80 backdrop-blur-md border-b border-emerald-900">
+        <div class="text-2xl font-bold text-emerald-400 tracking-widest">FINWISE<span class="text-white">.AI</span></div>
+        <div class="flex items-center gap-6">
+            <div class="space-x-4 text-lg font-bold">
+                <button onclick="showSection('bank')" id="btn-bank" class="hover:text-emerald-300 transition text-emerald-400 border-b-2 border-emerald-500">NEURAL ANALYZER</button>
+                <button onclick="showSection('advisor')" id="btn-advisor" class="hover:text-emerald-300 transition">WEALTH ORACLE</button>
+                <button onclick="showSection('tracker')" id="btn-tracker" class="hover:text-emerald-300 transition">LIVE TRACKER</button>
+            </div>
+            <button onclick="resetKey()" class="text-xs border border-red-500 text-red-400 px-3 py-1 rounded hover:bg-red-900/30 transition">RESET KEY 🔑</button>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-6 py-10">
+        <div id="bank" class="section">
+            <div id="uploadStage" class="glass p-12 rounded-2xl text-center max-w-4xl mx-auto">
+                <h2 class="text-4xl text-emerald-400 mb-2 font-orbitron">STATEMENT DECRYPTION</h2>
+                <input type="file" id="bankFile" class="hidden" accept=".pdf" onchange="uploadBankFile()">
+                <label for="bankFile" class="block border-2 border-dashed border-emerald-500/30 p-10 rounded-xl cursor-pointer hover:bg-emerald-500/10 transition mt-8"><div class="text-5xl mb-4">📂</div><p class="text-xl text-emerald-300">DROP BANK PDF HERE</p></label>
+                <div id="loader" class="hidden mt-6 flex justify-center"><div class="loader"></div></div>
+            </div>
+            <div id="configStage" class="hidden">
+                <h3 class="text-3xl text-white mb-6 font-bold border-l-4 border-emerald-500 pl-4">DATA CONFIGURATION</h3>
+                <div class="flex flex-col lg:flex-row gap-6 h-[600px]">
+                    <div class="glass p-4 rounded-xl flex-1 flex flex-col h-full"><h4 class="text-emerald-400 mb-2 text-sm font-bold">RAW DATA PREVIEW</h4><div class="overflow-auto custom-scroll flex-grow border border-emerald-900/50 rounded"><table class="w-full text-left text-xs font-mono text-gray-400"><thead class="bg-emerald-900/40 text-emerald-300 sticky top-0" id="previewHead"></thead><tbody id="previewBody"></tbody></table></div></div>
+                    <div class="flex-1 flex flex-col gap-6 h-full overflow-auto custom-scroll pr-2"><div class="glass p-6 rounded-xl"><h4 class="text-emerald-400 mb-4 text-sm font-bold">MAP COLUMNS</h4><div class="space-y-3"><div><label class="text-xs text-gray-500">DATE</label><select id="mapDate" class="input-field mt-1"></select></div><div><label class="text-xs text-gray-500">DESCRIPTION</label><select id="mapDesc" class="input-field mt-1"></select></div><div><label class="text-xs text-gray-500">CATEGORY (AI)</label><select id="mapCat" class="input-field mt-1 text-emerald-400 font-bold"></select></div><div><label class="text-xs text-gray-500">WITHDRAWAL</label><select id="mapWith" class="input-field mt-1"></select></div><div><label class="text-xs text-gray-500">DEPOSIT</label><select id="mapDep" class="input-field mt-1"></select></div></div></div><div class="glass p-6 rounded-xl flex-grow flex flex-col"><button id="analyzeBtn" onclick="processConfig()" class="action-btn mt-auto">ANALYZE DASHBOARD 🚀</button></div></div>
+                </div>
+            </div>
+            <div id="resultsStage" class="hidden space-y-8">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6"><div class="glass p-6 rounded-xl"><p class="text-gray-400 text-xs uppercase">Total Income</p><p class="text-3xl text-green-400 font-mono mt-1" id="resIncome">₹0</p></div><div class="glass p-6 rounded-xl"><p class="text-gray-400 text-xs uppercase">Total Expense</p><p class="text-3xl text-red-400 font-mono mt-1" id="resExpense">₹0</p></div><div class="glass p-6 rounded-xl border-l-4 border-emerald-500"><p class="text-gray-400 text-xs uppercase">Net Flow</p><p class="text-3xl text-white font-mono mt-1" id="resNet">₹0</p></div></div>
+                <div class="glass p-6 rounded-xl border-l-4 border-purple-500 bg-purple-900/10"><h4 class="text-purple-400 mb-2 font-bold flex items-center gap-2">✨ AI AUDITOR INSIGHT</h4><div id="aiInsightText" class="text-gray-300 text-sm leading-relaxed italic">Analyzing...</div></div>
+                <div class="flex flex-col lg:flex-row gap-6"><div class="glass p-6 rounded-xl flex-1 h-[450px] flex flex-col"><h4 class="text-emerald-400 mb-4 text-sm font-bold">CATEGORY SPLIT</h4><div class="flex-grow"><canvas id="c1"></canvas></div></div><div class="glass p-6 rounded-xl flex-[1.5] h-[450px] flex flex-col"><h4 class="text-emerald-400 mb-4 text-sm font-bold">DETAILED LOG</h4><div class="flex-grow overflow-hidden flex flex-col table-glass rounded-lg"><div class="overflow-y-scroll custom-scroll pr-2"><table class="w-full text-left text-xs font-mono"><thead class="table-head sticky top-0"><tr><th class="p-3">Date</th><th class="p-3">Description</th><th class="p-3">Category</th><th class="p-3 text-right">Debit</th><th class="p-3 text-right">Credit</th></tr></thead><tbody id="detailedLogBody" class="text-gray-300 divide-y divide-emerald-900/30"></tbody></table></div></div></div></div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div class="glass p-6 rounded-xl h-80"><canvas id="c2"></canvas></div><div class="glass p-6 rounded-xl h-80"><canvas id="c3"></canvas></div><div class="glass p-6 rounded-xl h-80"><canvas id="c4"></canvas></div><div class="glass p-6 rounded-xl h-80"><canvas id="c6"></canvas></div></div>
+            </div>
+        </div>
+
+        <div id="advisor" class="section hidden max-w-7xl mx-auto">
+            <div class="flex gap-8 flex-col md:flex-row">
+                <div class="glass p-8 rounded-xl flex-1 h-fit"><h2 class="text-2xl text-emerald-400 mb-6 font-bold border-b border-emerald-800 pb-2 font-orbitron">USER PARAMETERS</h2><div class="space-y-5"><div class="grid grid-cols-2 gap-4"><div><label class="text-xs text-gray-400 font-bold">AGE</label><input type="number" id="advAge" value="20" class="input-field"></div><div><label class="text-xs text-gray-400 font-bold">RISK</label><select id="advRisk" class="input-field"><option>Conservative</option><option>Moderate</option><option selected>Aggressive</option></select></div></div><div><label class="text-xs text-gray-400 font-bold">JOB TITLE</label><input type="text" id="advJob" value="Research Analyst" class="input-field"></div><div><label class="text-xs text-gray-400 font-bold">MONTHLY INCOME (₹)</label><input type="number" id="advInc" value="45000" class="input-field"></div><div class="grid grid-cols-2 gap-4"><div><label class="text-xs text-gray-400 font-bold">INVEST AMOUNT (₹)</label><input type="number" id="advAmt" value="25000" class="input-field"></div><div><label class="text-xs text-gray-400 font-bold">TYPE</label><select id="advType" class="input-field"><option>Monthly SIP</option><option>Lumpsum</option></select></div></div><div><label class="text-xs text-gray-400 font-bold">CONSTRAINTS</label><textarea id="advCons" rows="2" class="input-field">no ill product companies</textarea></div><button onclick="getAdvice()" id="advBtn" class="action-btn mt-4">GENERATE STRATEGY</button></div></div>
+                <div id="advRes" class="glass p-8 rounded-xl flex-[1.5] hidden flex flex-col gap-6 relative"><div class="flex justify-between items-start border-b border-emerald-800/50 pb-6"><div><h3 class="text-4xl text-white font-bold font-orbitron tracking-wide">STRATEGY <br><span class="text-emerald-400">GENERATED</span></h3><p class="text-sm font-mono mt-2 text-emerald-200/70" id="advSentiment">MARKET MOOD: VOLATILE</p></div><div class="bg-black/40 border border-emerald-500/30 p-4 rounded-lg text-right"><p class="text-[10px] text-gray-400 uppercase tracking-widest mb-1">BENCHMARK</p><div class="text-xl text-white font-bold" id="advBenchName">Nifty 50</div><div class="text-sm text-emerald-400 font-mono" id="advAlpha">ALPHA: +3.0% 🚀</div></div></div><div class="p-4 bg-emerald-900/10 border-l-2 border-emerald-500 rounded-r-lg"><p id="advStrategy" class="text-gray-300 italic text-sm leading-relaxed">...</p></div><div class="flex-grow overflow-hidden rounded-lg border border-emerald-800/50 bg-black/20"><table class="w-full text-left text-sm"><thead class="bg-emerald-900/40 text-emerald-400 uppercase text-[10px] tracking-wider"><tr><th class="p-4">ASSET / TICKER</th><th class="p-4">RATIONALE</th><th class="p-4 text-right">LIVE PRICE</th><th class="p-4 text-right">ALLOCATION</th><th class="p-4 text-right">QTY</th></tr></thead><tbody id="advTable" class="divide-y divide-emerald-900/30 text-gray-300"></tbody></table></div><div class="text-right text-xs text-gray-500 mt-2">Verified Allocation: ₹<span id="advTotal">0</span></div></div>
+            </div>
+        </div>
+
+        <div id="tracker" class="section hidden max-w-4xl mx-auto">
+            <div class="glass p-8 rounded-xl">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-3xl text-emerald-400 font-bold">LIVE FEED</h2>
+                    </div>
+                    <button onclick="fetchTracker()" class="bg-emerald-900/50 hover:bg-emerald-800 text-emerald-300 px-4 py-2 rounded text-sm border border-emerald-500/30">REFRESH</button>
+                </div>
+
+                <div class="glass p-6 rounded-xl mb-6 border border-emerald-500/30 flex flex-col md:flex-row items-center gap-8">
+                    <div class="bg-white p-2 rounded-lg shadow-[0_0_15px_rgba(16,185,129,0.4)]">
+                        <img src="{{ url_for('static', filename='whatsapp-qr.png') }}" alt="Scan to Connect" class="w-40 h-40">
+                    </div>
+                    <div class="text-left space-y-2">
+                        <h3 class="text-xl text-emerald-400 font-bold font-orbitron">CONNECT BOT</h3>
+                        <p class="text-gray-400 text-sm">1. Scan this QR code with WhatsApp.</p>
+                        <p class="text-gray-400 text-sm">2. Send the join code: <b class="text-white">join paper-flamingo</b></p>
+                        <p class="text-gray-400 text-sm">3. Start tracking: <span class="font-mono text-emerald-300 bg-black/50 px-2 py-1 rounded">"Spent 500 on Pizza"</span></p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4 mb-6">
+                    <div class="bg-black/30 p-4 rounded border border-emerald-900"><p class="text-xs text-gray-500">INCOME</p><p id="liveInc" class="text-xl text-green-400">₹0</p></div>
+                    <div class="bg-black/30 p-4 rounded border border-emerald-900"><p class="text-xs text-gray-500">SPENT</p><p id="liveExp" class="text-xl text-red-400">₹0</p></div>
+                    <div class="bg-black/30 p-4 rounded border border-emerald-900"><p class="text-xs text-gray-500">NET</p><p id="liveNet" class="text-xl text-white">₹0</p></div>
+                </div>
+                <div id="trackerFeed" class="space-y-2 font-mono text-sm text-gray-300 h-96 overflow-auto custom-scroll p-2 border border-emerald-900/50 rounded bg-black/20"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        try { VANTA.NET({ el: "#vanta-bg", color: 0x10b981, backgroundColor: 0x050505, points: 12, maxDistance: 22 }); } catch(e){}
+        let rawData = [], rules = [], charts = {};
+
+        function saveKey() {
+            const k = document.getElementById('apiKeyInput').value;
+            if(k.startsWith("AIza")) {
+                localStorage.setItem("gemini_key", k);
+                document.getElementById('authModal').classList.add('hidden');
+            } else { alert("Invalid API Key format"); }
+        }
+
+        function resetKey() {
+            localStorage.removeItem("gemini_key");
+            location.reload();
+        }
+
+        window.onload = () => { if(localStorage.getItem("gemini_key")) document.getElementById('authModal').classList.add('hidden'); };
+        function getAuthHeaders() { return { 'X-Gemini-Key': localStorage.getItem("gemini_key") }; }
+
+        function showSection(id) {
+            document.querySelectorAll('.section').forEach(el => el.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+            ['bank','advisor','tracker'].forEach(t => {
+                const btn = document.getElementById('btn-'+t);
+                if(t===id) btn.classList.add('text-emerald-400','border-b-2','border-emerald-500');
+                else btn.classList.remove('text-emerald-400','border-b-2','border-emerald-500');
+            });
+            if(id==='tracker') fetchTracker();
+        }
+
+        async function uploadBankFile() {
+            const file = document.getElementById('bankFile').files[0]; if (!file) return;
+            document.getElementById('loader').classList.remove('hidden');
+            const fd = new FormData(); fd.append('file', file);
+            try {
+                const res = await fetch('/api/analyze_bank', { method: 'POST', headers: getAuthHeaders(), body: fd });
+                const data = await res.json();
+                document.getElementById('loader').classList.add('hidden');
+                if (data.status === 'success') {
+                    rawData = data.data; populateConfig(data.data, data.columns);
+                    document.getElementById('uploadStage').classList.add('hidden');
+                    document.getElementById('configStage').classList.remove('hidden');
+                } else { alert(data.error); }
+            } catch(e) { alert(e); document.getElementById('loader').classList.add('hidden'); }
+        }
+
+        function populateConfig(data, cols) {
+            document.getElementById('previewHead').innerHTML = `<tr>${cols.map(c=>`<th class="p-2 border-b border-emerald-800 whitespace-nowrap">${c}</th>`).join('')}</tr>`;
+            document.getElementById('previewBody').innerHTML = data.slice(0,50).map(r=>`<tr>${cols.map(c=>`<td class="p-2 border-b border-emerald-900/30 whitespace-nowrap">${r[c]}</td>`).join('')}</tr>`).join('');
+            ['mapDate', 'mapDesc', 'mapWith', 'mapDep', 'mapCat'].forEach(id => {
+                const el = document.getElementById(id); el.innerHTML = ''; cols.forEach(c => el.innerHTML += `<option>${c}</option>`);
+                const l = id.toLowerCase();
+                if(l.includes('date')) el.value = cols.find(c=>c.toLowerCase().includes('date')) || cols[0];
+                if(l.includes('desc')) el.value = cols.find(c=>c.toLowerCase().includes('desc')) || cols[1];
+                if(l.includes('with')) el.value = cols.find(c=>c.toLowerCase().includes('withdraw') || c.toLowerCase().includes('debit')) || cols[2];
+                if(l.includes('dep'))  el.value = cols.find(c=>c.toLowerCase().includes('deposit') || c.toLowerCase().includes('credit')) || cols[3];
+                if(l.includes('cat'))  el.value = cols.find(c=>c.toLowerCase().includes('category')) || cols[4] || cols[0];
+            });
+        }
+
+        async function processConfig() {
+            const btn=document.getElementById('analyzeBtn'); btn.innerText="Processing..."; btn.disabled=true;
+            const md=document.getElementById('mapDate').value, mds=document.getElementById('mapDesc').value, mw=document.getElementById('mapWith').value, mp=document.getElementById('mapDep').value, mc=document.getElementById('mapCat').value;
+            const mapped = rawData.map(row => {
+                let desc = row[mds]||"", cat = row[mc] || "General";
+                return { Date: row[md], Description: desc, Withdrawal: row[mw], Deposit: row[mp], Category: cat };
+            });
+
+            try {
+                const res = await fetch('/api/save_transactions', { method: 'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({data:mapped}) });
+                const result = await res.json();
+                if(result.status==='success') {
+                    document.getElementById('configStage').classList.add('hidden');
+                    document.getElementById('resultsStage').classList.remove('hidden');
+                    renderDashboard(result.stats);
+                    renderDetailedLog(mapped);
+                    const aiRes = await fetch('/api/generate_insight', { method: 'POST', headers:{'Content-Type':'application/json', ...getAuthHeaders()}, body:JSON.stringify({stats:result.stats}) });
+                    const aiData = await aiRes.json();
+                    document.getElementById('aiInsightText').innerHTML = aiData.insight;
+                } else { alert(result.error); }
+            } catch(e) { alert(e); } finally { btn.innerText="ANALYZE DASHBOARD 🚀"; btn.disabled=false; }
+        }
+
+        function renderDetailedLog(data) {
+            const tbody = document.getElementById('detailedLogBody'); tbody.innerHTML = '';
+            data.forEach(row => { tbody.innerHTML += `<tr class="table-row"><td class="p-3 text-gray-400 whitespace-nowrap">${row.Date}</td><td class="p-3 text-white truncate max-w-[150px]" title="${row.Description}">${row.Description}</td><td class="p-3"><span class="bg-emerald-900/30 text-emerald-400 text-xs px-2 py-1 rounded">${row.Category}</span></td><td class="p-3 text-right text-red-400">${row.Withdrawal > 0 ? '₹'+row.Withdrawal : '-'}</td><td class="p-3 text-right text-green-400">${row.Deposit > 0 ? '₹'+row.Deposit : '-'}</td></tr>`; });
+        }
+
+        function renderDashboard(s) {
+            document.getElementById('resIncome').innerText = `₹${s.income}`; document.getElementById('resExpense').innerText = `₹${s.expense}`; document.getElementById('resNet').innerText = `₹${s.net}`;
+            const c = s.charts; const destroy = (id) => { if(charts[id]) charts[id].destroy(); };
+            const palette = ['#10b981', '#34d399', '#059669', '#6ee7b7', '#064e3b', '#14b8a6', '#5eead4', '#0d9488', '#99f6e4', '#115e59', '#84cc16', '#bef264', '#65a30d', '#d9f99d', '#3f6212', '#06b6d4', '#67e8f9', '#0891b2', '#cffafe', '#155e75', '#f43f5e', '#fb7185', '#e11d48', '#fda4af', '#9f1239'];
+            destroy('c1'); charts['c1'] = new Chart(document.getElementById('c1'), { type: 'doughnut', data: { labels: Object.keys(c.cat_data), datasets: [{ data: Object.values(c.cat_data), backgroundColor: palette }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: 'white', font: { size: 10 } } } } } });
+            destroy('c2'); charts['c2'] = new Chart(document.getElementById('c2'), { type: 'line', data: { labels: Object.keys(c.trend_exp), datasets: [{ label: 'Daily', data: Object.values(c.trend_exp), borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.2)', fill: true }] } });
+            destroy('c3'); charts['c3'] = new Chart(document.getElementById('c3'), { type: 'bar', data: { labels: Object.keys(c.top_exp), datasets: [{ label: 'Amount', data: Object.values(c.top_exp), backgroundColor: '#f87171' }] }, options: { indexAxis: 'y' } });
+            destroy('c4'); charts['c4'] = new Chart(document.getElementById('c4'), { type: 'polarArea', data: { labels: Object.keys(c.freq_data), datasets: [{ data: Object.values(c.freq_data), backgroundColor: palette }] } });
+            destroy('c6'); charts['c6'] = new Chart(document.getElementById('c6'), { type: 'bar', data: { labels: Object.keys(c.trend_inc), datasets: [{ label: 'Inc', data: Object.values(c.trend_inc), backgroundColor: '#10b981' }, { label: 'Exp', data: Object.values(c.trend_exp), backgroundColor: '#ef4444' }] } });
+        }
+
+        async function getAdvice() {
+            const btn = document.getElementById('advBtn'); btn.innerText = "Consulting AI..."; btn.disabled = true;
+            try {
+                const res = await fetch('/api/advisor', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', ...getAuthHeaders()},
+                    body: JSON.stringify({ age: document.getElementById('advAge').value, risk: document.getElementById('advRisk').value, job: document.getElementById('advJob').value, income: document.getElementById('advInc').value, amount: document.getElementById('advAmt').value, type: document.getElementById('advType').value, constraints: document.getElementById('advCons').value })
+                });
+                const data = await res.json();
+                if(data.error) { alert(data.error); } else {
+                    document.getElementById('advRes').classList.remove('hidden');
+                    // FIXED: Using correct key matching backend
+                    document.getElementById('advSentiment').innerText = `MARKET SENTIMENT: ${data.market_sentiment}`;
+                    document.getElementById('advStrategy').innerText = data.strategy_note;
+                    document.getElementById('advTotal').innerText = data.total_verify;
+                    const tbody = document.getElementById('advTable'); tbody.innerHTML = '';
+                    data.portfolio.forEach(item => {
+                        let pClass = item.live_price==="NAV"?"text-gray-400":"text-yellow-400 animate-pulse";
+                        tbody.innerHTML += `<tr class="hover:bg-emerald-900/10"><td class="p-3 text-white font-bold">${item.asset}</td><td class="p-3 text-gray-400 font-mono">${item.ticker || '-'}</td><td class="p-3 text-right font-mono ${pClass}">${item.live_price != "NAV" ? '₹'+item.live_price : 'NAV'}</td><td class="p-3 text-right text-emerald-400 font-bold">₹${item.allocation_amt}</td><td class="p-3 text-right text-white font-bold">${item.shares}</td></tr>`;
+                    });
+                }
+            } catch(e) { alert(e); }
+            btn.innerText = "GENERATE STRATEGY"; btn.disabled = false;
+        }
+
+        async function fetchTracker() { const res = await fetch('/api/tracker_data'); const data = await res.json(); const feed = document.getElementById('trackerFeed'); document.getElementById('liveInc').innerText = `₹${data.stats.income}`; document.getElementById('liveExp').innerText = `₹${data.stats.expense}`; document.getElementById('liveNet').innerText = `₹${data.stats.net}`; feed.innerHTML = ''; if(data.transactions.length === 0) { feed.innerHTML = "<div class='text-center text-gray-600 mt-20'>Waiting for webhook data...</div>"; return; } data.transactions.forEach(t => { const isInc = t.Category === 'Income'; feed.innerHTML += `<div class="flex justify-between items-center p-2 border-b border-gray-800"><div><div class="text-white font-bold">${t.Description}</div><div class="text-xs text-gray-500">${t.Date}</div></div><div class="${isInc?'text-green-400':'text-red-400'} font-mono font-bold">${isInc?'+':'-'}₹${isInc?t.Deposit:t.Withdrawal}</div></div>`; }); }
+    </script>
+</body>
+</html>
