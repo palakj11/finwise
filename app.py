@@ -13,7 +13,7 @@ from twilio.twiml.messaging_response import MessagingResponse
 from io import StringIO
 
 app = Flask(__name__)
-app.secret_key = "cyberpunk_secret_key"
+app.secret_key = os.getenv("SECRET_KEY")
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -26,7 +26,7 @@ live_transactions = []
 # --- HELPERS ---
 def get_client():
     """Initializes Gemini Client using the key from the request header."""
-    api_key = request.headers.get('X-Gemini-Key')
+    localStorage.setItem("gemini_key", k);
     if not api_key: return None
     return genai.Client(api_key=api_key)
 
